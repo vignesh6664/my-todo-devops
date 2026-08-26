@@ -7,5 +7,10 @@
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "dev": "pnpm -r dev"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "*"
+    ]
   }
 }
