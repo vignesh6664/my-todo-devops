@@ -59,3 +59,13 @@ The pipeline uses a **Fail-Fast** architecture and includes the following steps:
 
 ### CI/CD Lessons Learned:
 * **Toolchain Version Pinning:** The CI pipeline originally failed because the GitHub runner downloaded the bleeding-edge version of `pnpm` (v11), which introduced strict security policies blocking background build scripts like Prisma. I fixed this by using the `pnpm/action-setup` module to explicitly pin the pipeline to `pnpm v8`, mirroring the environment the code was originally written for.
+
+## Continuous Delivery (CD) to Docker Hub
+
+After passing the CI checks, the pipeline transitions into the **Continuous Delivery** phase:
+
+1. **Secure Authentication:** The pipeline securely logs into Docker Hub using GitHub Secrets (`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`) without exposing credentials in the logs.
+2. **Multi-Tagging:** The Docker images are built and instantly assigned two tags: `latest` (for easy local pulling) and the unique **Git Commit SHA** (for strict production versioning and rollbacks).
+3. **Artifact Delivery:** The pipeline executes `docker push` to upload the finished frontend and backend images directly to the Docker Hub registry. 
+
+The application is now officially a delivered artifact—ready to be pulled and run by a production server at a moment's notice using a simple `docker pull`!
