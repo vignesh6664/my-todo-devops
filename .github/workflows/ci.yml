@@ -47,6 +47,18 @@ jobs:
           pnpm --filter ./backend run db:generate
           pnpm --filter ./backend run build
 
-      # 5. Docker Compose Build
-      - name: Verify Docker Compose Build
-        run: docker compose build
+      # 5. Build and Tag Docker Images
+      - name: Build and Tag Backend Image
+        run: |
+          echo "Building Backend Image..."
+          docker build -t todo-backend:${{ github.sha }} ./backend
+          docker tag todo-backend:${{ github.sha }} todo-backend:latest
+
+      - name: Build and Tag Frontend Image
+        run: |
+          echo "Building Frontend Image..."
+          docker build -t todo-frontend:${{ github.sha }} ./frontend
+          docker tag todo-frontend:${{ github.sha }} todo-frontend:latest
+          
+      - name: Show Built Images
+        run: docker images
