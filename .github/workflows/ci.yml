@@ -1,0 +1,29 @@
+name: Continuous Integration (CI)
+
+on:
+  # The pipeline will run automatically when you push to main or any feature branch
+  push:
+    branches:
+      - main
+      - 'feature/*'
+  # It will also run when someone opens a Pull Request to merge into main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build & Verify Application
+    # GitHub will spin up a temporary, fresh Ubuntu server in the cloud for this job
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Tell the server to download your repository's code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Test that the backend and frontend can actually be containerized
+      # Since our Dockerfiles internally run `npm run build`, if a developer writes
+      # bad TypeScript code, this Docker build will fail, and GitHub will block the code!
+      - name: Verify Docker Compose Build
+        run: docker compose build
