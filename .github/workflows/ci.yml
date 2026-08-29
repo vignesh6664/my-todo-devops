@@ -26,4 +26,4 @@ jobs:
       # Since our Dockerfiles internally run `npm run build`, if a developer writes
       # bad TypeScript code, this Docker build will fail, and GitHub will block the code!
       - name: Verify Docker Compose Build
-        run: docker-compose build
+        run: docker compose build
