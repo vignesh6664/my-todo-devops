@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'feature/*'
     paths-ignore:
       - 'README.md'
       - 'docs/**'
@@ -53,29 +52,38 @@ jobs:
           pnpm --filter ./backend run db:generate
           pnpm --filter ./backend run build
 
-      # 5. Authenticate with Docker Hub
+      # 5. Authenticate with Docker Hub (Only when pushing to main)
       - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 6. Build and Push Backend Image
-      - name: Build and Push Backend Image
+      # 6. Build Backend Image (and push ONLY if on main)
+      - name: Build Backend Image
         run: |
           echo "Building Backend Image..."
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }} -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest ./backend
           
-          echo "Pushing Backend Image..."
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Pushing Backend Image..."
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }}
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest
+          else
+            echo "Skipping push. This is a PR, so we just wanted to verify it builds successfully!"
+          fi
 
-      # 7. Build and Push Frontend Image
-      - name: Build and Push Frontend Image
+      # 7. Build Frontend Image (and push ONLY if on main)
+      - name: Build Frontend Image
         run: |
           echo "Building Frontend Image..."
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }} -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest ./frontend
           
-          echo "Pushing Frontend Image..."
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Pushing Frontend Image..."
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }}
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest
+          else
+            echo "Skipping push. This is a PR, so we just wanted to verify it builds successfully!"
+          fi
