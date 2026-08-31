@@ -5,6 +5,12 @@ const SERVER_PORT = 8080;
 
 async function main() {
   const app = express();
+  
+  // SIMULATED BAD DEPLOYMENT: Code compiles fine, but crashes at runtime!
+  if (process.env.NODE_ENV !== "test") {
+      console.error("FATAL: Unhandled Database Timeout Exception");
+      process.exit(1);
+  }
 
   app.use(express.json());
 
