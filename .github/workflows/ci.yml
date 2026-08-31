@@ -87,3 +87,20 @@ jobs:
           else
             echo "Skipping push. This is a PR, so we just wanted to verify it builds successfully!"
           fi
+
+      # 8. Print Success Summary (Only if on main)
+      - name: Print Push Summary
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Successfully pushed:"
+          echo ""
+          echo "Frontend:"
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }}"
+          echo ""
+          echo "Backend:"
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }}"
+          
+          # This creates a beautiful Markdown summary on the GitHub Actions UI page!
+          echo "### 🚀 Successfully published Docker Images!" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend:** \`${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend:** \`${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
