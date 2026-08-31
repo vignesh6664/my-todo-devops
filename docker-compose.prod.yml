@@ -3,7 +3,7 @@ version: "3.8"
 services:
   db:
     image: postgres:15-alpine
-    container_name: todo-postgres
+    container_name: todo-postgres-prod
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -12,16 +12,14 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata-prod:/var/lib/postgresql/data
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: todo-backend
+    # Instead of building from code, we pull directly from Docker Hub!
+    image: ${DOCKER_USERNAME}/todo-backend:${IMAGE_TAG}
+    container_name: todo-backend-prod
     restart: always
     environment:
-      # Notice how we use 'db' here! Docker internal networking resolves the service name.
       DATABASE_URL: ${DATABASE_URL}
     ports:
       - "8080:8080"
@@ -29,10 +27,9 @@ services:
       - db
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: todo-frontend
+    # Pulling the frontend directly from Docker Hub
+    image: ${DOCKER_USERNAME}/todo-frontend:${IMAGE_TAG}
+    container_name: todo-frontend-prod
     restart: always
     ports:
       - "5173:80"
@@ -40,4 +37,4 @@ services:
       - backend
 
 volumes:
-  pgdata:
+  pgdata-prod:

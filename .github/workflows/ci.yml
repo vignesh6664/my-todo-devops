@@ -1,29 +1,89 @@
 name: Continuous Integration (CI)
 
 on:
-  # The pipeline will run automatically when you push to main or any feature branch
   push:
     branches:
       - main
-      - 'feature/*'
-  # It will also run when someone opens a Pull Request to merge into main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
 
 jobs:
-  build-and-test:
-    name: Build & Verify Application
-    # GitHub will spin up a temporary, fresh Ubuntu server in the cloud for this job
+  verify-application:
+    name: Code Checks & Docker Build
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Tell the server to download your repository's code
+      # 1. Download the code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Test that the backend and frontend can actually be containerized
-      # Since our Dockerfiles internally run `npm run build`, if a developer writes
-      # bad TypeScript code, this Docker build will fail, and GitHub will block the code!
-      - name: Verify Docker Compose Build
-        run: docker compose build
+      # 2. Set up Node.js and PNPM
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install Workspace Dependencies
+        run: pnpm install
+
+      # 3. Frontend Build Check
+      - name: Frontend Build Check
+        run: |
+          echo "Running Frontend checks..."
+          pnpm --filter ./frontend run build
+
+      # 4. Backend Dependency Check
+      - name: Backend Dependency Check
+        run: |
+          echo "Running Backend checks..."
+          # Generate the Prisma client first, then build
+          pnpm --filter ./backend run db:generate
+          pnpm --filter ./backend run build
+
+      # 5. Authenticate with Docker Hub (Only when pushing to main)
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 6. Build Backend Image (and push ONLY if on main)
+      - name: Build Backend Image
+        run: |
+          echo "Building Backend Image..."
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }} -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest ./backend
+          
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Pushing Backend Image..."
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:${{ github.sha }}
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-backend:latest
+          else
+            echo "Skipping push. This is a PR, so we just wanted to verify it builds successfully!"
+          fi
+
+      # 7. Build Frontend Image (and push ONLY if on main)
+      - name: Build Frontend Image
+        run: |
+          echo "Building Frontend Image..."
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }} -t ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest ./frontend
+          
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Pushing Frontend Image..."
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:${{ github.sha }}
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/todo-frontend:latest
+          else
+            echo "Skipping push. This is a PR, so we just wanted to verify it builds successfully!"
+          fi

@@ -45,3 +45,27 @@ While containerizing this application, I ran into a few classic DevOps gotchas:
 ### 3. The 502 Bad Gateway
 * **Error:** After getting `docker-compose up` working, visiting the frontend threw a `502 Bad Gateway` error in the browser console.
 * **Fix:** I checked the backend logs (`docker-compose logs backend`) and saw that the Express server was crashing because `The table public.Todo does not exist`. Because Docker Compose created a brand new Postgres container, the database was totally empty. I fixed it by running `prisma migrate deploy` inside the running backend container to generate the tables.
+
+---
+
+## Continuous Integration (CI) Pipeline
+
+I built a professional GitHub Actions CI Pipeline (`.github/workflows/ci.yml`) to automatically test and verify the code on every push and Pull Request. 
+
+The pipeline uses a **Fail-Fast** architecture and includes the following steps:
+1. **Frontend Verification:** Runs `pnpm build` on the React app first to catch syntax/component errors instantly.
+2. **Backend Verification:** Generates the Prisma client and runs the Express TypeScript build.
+3. **Docker Image Build & Tagging:** Builds the production Docker images. Crucially, instead of tagging the images with `:latest`, the pipeline explicitly tags them with the **Git Commit SHA** (`${{ github.sha }}`). This ensures 100% traceability—if `todo-backend:a1b2c3d` is running in production, I know exactly which line of code it corresponds to, allowing for instant and safe rollbacks.
+
+### CI/CD Lessons Learned:
+* **Toolchain Version Pinning:** The CI pipeline originally failed because the GitHub runner downloaded the bleeding-edge version of `pnpm` (v11), which introduced strict security policies blocking background build scripts like Prisma. I fixed this by using the `pnpm/action-setup` module to explicitly pin the pipeline to `pnpm v8`, mirroring the environment the code was originally written for.
+
+## Continuous Delivery (CD) to Docker Hub
+
+After passing the CI checks, the pipeline transitions into the **Continuous Delivery** phase:
+
+1. **Secure Authentication:** The pipeline securely logs into Docker Hub using GitHub Secrets (`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`) without exposing credentials in the logs.
+2. **Multi-Tagging:** The Docker images are built and instantly assigned two tags: `latest` (for easy local pulling) and the unique **Git Commit SHA** (for strict production versioning and rollbacks).
+3. **Artifact Delivery:** The pipeline executes `docker push` to upload the finished frontend and backend images directly to the Docker Hub registry. 
+
+The application is now officially a delivered artifact—ready to be pulled and run by a production server at a moment's notice using a simple `docker pull`!
